@@ -1,0 +1,88 @@
+# ============================================================
+# RRIN — Restorative Retinal Imaging Network
+# Main Configuration File
+# ============================================================
+# INSTRUCTIONS FOR BEGINNERS:
+# This file controls everything about how the AI trains.
+# Lines starting with "#" are comments (ignored by the program).
+# Change the values AFTER the colon ":" to customise the run.
+# ============================================================
+
+# ---- PATHS -------------------------------------------------
+# Where raw downloaded dataset images live on your computer.
+# On Kaggle you can set these to /kaggle/input/<dataset-name>
+dataset_paths:
+  eyepacs:    "data/eyepacs"          # EyePACS Kaggle DR dataset folder
+  aptos:      "data/aptos"            # APTOS 2019 folder
+  idrid:      "data/idrid"            # IDRiD folder
+  messidor2:  "data/messidor2"        # MESSIDOR-2 (NEVER touched during training)
+  rfmid:      "data/rfmid"            # RFMiD folder
+  odir:       "data/odir"             # ODIR-5K folder
+  stare:      "data/stare"            # STARE vessel dataset
+  drive:      "data/drive"            # DRIVE vessel dataset
+
+# Internal storage created automatically - leave as-is
+metadata_db_path:  "metadata/retina_restoration_metadata.sqlite"
+checkpoint_dir:    "checkpoints/"
+log_dir:           "logs/"
+
+# ---- IMAGE SETTINGS ----------------------------------------
+image_size:      256    # Resize all images to this square size (pixels)
+crop_size:       256    # Random-crop patch size during training
+input_channels:  4      # 3 RGB + 1 green-channel copy (leave as 4)
+output_channels: 3      # RGB output
+
+# ---- MODEL ARCHITECTURE ------------------------------------
+base_filters:          64    # Number of conv filters in the first layer (higher = bigger model)
+num_residual_blocks:   6     # How many residual blocks in the bottleneck
+attention_gate_enabled: true # Whether to use attention gates on skip connections
+
+# ---- TRAINING HYPER-PARAMETERS ----------------------------
+batch_size:          4      # How many images per training step  (reduce to 2 if GPU runs out of memory)
+num_workers:         2      # CPU threads for loading images (set to 0 on Windows)
+num_epochs:          200    # Total training epochs
+lr_constant_epochs:  100    # Keep learning rate constant for this many epochs
+lr_decay_epochs:     100    # Then decay to zero over this many epochs
+
+learning_rate:  0.0002   # Starting learning rate
+adam_beta1:     0.5      # Adam momentum (0.5 is standard for GANs)
+adam_beta2:     0.999    # Adam second-moment
+adam_epsilon:   1.0e-8   # Adam epsilon
+weight_decay:   1.0e-5   # L2 regularisation strength
+
+# ---- LOSS WEIGHTS ------------------------------------------
+# These control how important each part of the loss is.
+# lambda_l1 at 100 means pixel accuracy is the dominant goal.
+lambda_adv:        1.0    # Adversarial (GAN) loss weight
+lambda_l1:         100.0  # Pixel-level accuracy loss weight
+lambda_ssim:       10.0   # Structural similarity loss weight
+lambda_perceptual: 10.0   # Perceptual (VGG feature) loss weight
+lambda_cycle:      10.0   # Cycle-consistency loss weight (Tier-3 only)
+
+# ---- TRAINING STABILITY ------------------------------------
+label_smoothing_real_target: 0.9   # Prevents discriminator from being overconfident
+early_stopping_patience:     15    # Stop if no improvement for this many epochs
+
+# ---- VGG PERCEPTUAL LOSS LAYERS ----------------------------
+vgg_perceptual_layers:
+  - "relu2_2"
+  - "relu3_3"
+
+# ---- RANDOM SEED (reproducibility) ------------------------
+random_seed: 42
+
+# ---- DATA SPLITS -------------------------------------------
+train_fraction: 0.85   # 85% of patients go to training
+val_fraction:   0.10   # 10% go to validation
+# Remaining 5% go to the in-domain test set
+# MESSIDOR-2 is ALWAYS held out separately (never in splits)
+
+# ---- QUALITY FILTERING ------------------------------------
+# Images must score in the TOP 25% to become "pseudo-clean" targets
+quality_quantile_threshold: 0.75
+
+# ---- DEGRADATION PIPELINE ---------------------------------
+# These control the random synthetic corruption applied to clean images
+blur_probability:         0.6    # Chance of applying motion/defocus blur
+num_reflections_range:    [1, 4] # Min/max specular reflection blobs
+jpeg_quality_range:       [35, 80]
